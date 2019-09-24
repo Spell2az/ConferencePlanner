@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BackEnd.Data;
 using BackEnd.Infrastructure;
 using ConferenceDTO;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Speaker = BackEnd.Data.Speaker;
@@ -37,7 +35,7 @@ namespace BackEnd.Controllers
         }
 
         // GET: api/Speakers/5
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<ConferenceDTO.Speaker>> GetSpeaker(int id)
         {
             var speaker = await _db.Speakers.AsNoTracking()
@@ -54,50 +52,75 @@ namespace BackEnd.Controllers
         }
 
         // PUT: api/Speakers/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutSpeaker(int id, Speaker speaker)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> PutSpeaker(int id, ConferenceDTO.Speaker input)
         {
-            if (id != speaker.ID)
+            var speaker = await _db.FindAsync<Speaker>(id);
+
+            if (speaker == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _db.Entry(speaker).State = EntityState.Modified;
+            speaker.Name = input.Name;
+            speaker.WebSite = input.WebSite;
+            speaker.Bio = input.Bio;
 
-            try
-            {
-                await _db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!SpeakerExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            #region Generated try block
+            //if (id != speaker.ID)
+            //{
+            //    return BadRequest();
+            //}
+
+            //_db.Entry(speaker).State = EntityState.Modified;
+
+            //try
+            //{
+            //    await _db.SaveChangesAsync();
+            //}
+            //catch (DbUpdateConcurrencyException)
+            //{
+            //    if (!SpeakerExists(id))
+            //    {
+            //        return NotFound();
+            //    }
+            //    else
+            //    {
+            //        throw;
+            //    }
+            //} 
+            #endregion
+
+            // TODO: Handle exceptions, e.g. concurrency
+            await _db.SaveChangesAsync();
 
             return NoContent();
         }
 
         // POST: api/Speakers
         [HttpPost]
-        public async Task<ActionResult<Speaker>> PostSpeaker(Speaker speaker)
+        public async Task<ActionResult<ConferenceDTO.SpeakerResponse>> PostSpeaker(ConferenceDTO.Speaker input)
         {
+            var speaker = new Speaker
+            {
+                Name = input.Name,
+                WebSite = input.WebSite,
+                Bio = input.Bio
+            };
+
             _db.Speakers.Add(speaker);
             await _db.SaveChangesAsync();
 
-            return CreatedAtAction("GetSpeaker", new { id = speaker.ID }, speaker);
+            var result = speaker.MapSpeakerResponse();
+
+            return CreatedAtAction(nameof(GetSpeaker), new { id = speaker.ID }, result);
         }
 
         // DELETE: api/Speakers/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Speaker>> DeleteSpeaker(int id)
+        [HttpDelete("{id:int}")]
+        public async Task<ActionResult<ConferenceDTO.SpeakerResponse>> DeleteSpeaker(int id)
         {
-            var speaker = await _db.Speakers.FindAsync(id);
+            var speaker = await _db.FindAsync<Speaker>(id);
             if (speaker == null)
             {
                 return NotFound();
@@ -106,7 +129,7 @@ namespace BackEnd.Controllers
             _db.Speakers.Remove(speaker);
             await _db.SaveChangesAsync();
 
-            return speaker;
+            return speaker.MapSpeakerResponse();
         }
 
         private bool SpeakerExists(int id)
